@@ -54,14 +54,7 @@ tv-stream-app/
 
 ```javascript
 {
-  id: 'ch-my-ts',
-  name: 'قناة الرياضة TS Live',
-  category: 'sports',
-  format: 'ts', // تحديد نوع البث كـ TS
-  quality: '1080p TS',
-  icon: '⚡',
-  description: 'بث مباشر عبر بروتوكول MPEG-TS وبوابة MAC Portal.',
-  encryptedPayload: encryptStreamUrl('http://185.243.7.171:80/play/live.php?mac=00:1B:79:47:82:1F&stream=1917224&extension=ts&play_token=x8i583xBqk')
+  
 },
 ```
 
@@ -75,13 +68,7 @@ tv-stream-app/
 في ملف **[app.js](file:///C:/Users/my_pc/.gemini/antigravity/scratch/tv-stream-app/app.js)** داخل كائن القناة، ضع رابط الصورة في خاصية `icon`:
 ```javascript
 {
-  id: 'ch-bein-1',
-  name: 'beIN SPORTS 1 HD',
-  category: 'sports',
-  quality: '1080p FHD',
-  icon: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/BeIN_Sports_logo.svg', // رابط شعار القناة
-  description: 'البث المباشر لقناة بي إن سبورتس.',
-  encryptedPayload: encryptStreamUrl('رابط_البث_هنا')
+  
 }
 ```
 
