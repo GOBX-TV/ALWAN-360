@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title> ALWAN 360 </title>
+  <!-- منع التخزين المؤقت لتعزيز الأمان وتحديث الرموز المشفرة -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
+  <link rel="stylesheet" href="style.css">
+  <!-- مكتبة Hls.js لدعم بث M3U8 بسلاسة -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+  <!-- مكتبة mpegts.js المتطورة لدعم بث MPEG-TS المباشر (روابط .ts وروابط MAC Portal) -->
+  <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
+</head>
+<body>
+
+  <!-- تنبيه أمني عائم عند محاولة فحص الصفحة -->
+  <div id="security-alert" class="security-alert hidden">
+    <div class="alert-content">
+      <span class="alert-icon">🔒</span>
+      <span class="alert-text">تم تفعيل حماية البث: تم حظر محاولة استخراج عناصر البث أو فحص الكود.</span>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- الشريط العلوي للموقع -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zm-11-7v4l4-2-4-2z"/>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <h1>ألوان 360 <span>PRO</span></h1>
+          <span class="brand-subtitle">GOBX</span>
+        </div>
+      </div>
+
+      <!-- محرك البحث السريع عن القنوات -->
+      <div class="header-search">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="channel-search" placeholder="ابحث عن قناة أو تصنيف..." autocomplete="off">
+          <button id="clear-search" class="clear-btn hidden" title="مسح البحث">&times;</button>
+        </div>
+      </div>
+
+      <!-- أزرار الإجراءات وحالة النظام -->
+      <div class="header-actions">
+        <!-- زر فتح نافذة إضافة وتشغيل روابط مخصصة / MAC Portal (مخفي) -->
+        <button id="open-custom-modal-btn" class="custom-stream-btn hidden" title="تشغيل رابط TS أو MAC Portal مخصص">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>تشغيل رابط MAC / TS</span>
+        </button>
+
+        <div class="security-badge" title="طبقة الحماية النشطة مفعلة">
+          <span class="badge-pulse"></span>
+          <span class="badge-label">Premium</span>
+        </div>
+        <button id="toggle-sidebar" class="menu-toggle-btn" aria-label="تبديل القائمة">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- شريط تصنيفات القنوات السريع -->
+    <nav class="categories-bar">
+      <div class="categories-scroll" id="categories-container">
+        <button class="cat-pill active" data-category="all">جميع القنوات</button>
+        <button class="cat-pill" data-category="sports">رياضة</button>
+        <button class="cat-pill" data-category="news">أخبار</button>
+        <button class="cat-pill" data-category="movies">سينما وأفلام</button>
+        <button class="cat-pill" data-category="documentary">وثائقيات</button>
+        <button class="cat-pill" data-category="kids">أطفال</button>
+      </div>
+    </nav>
+
+    <!-- منطقة المحتوى الرئيسية: المشغل + قائمة القنوات -->
+    <main class="app-main">
+
+      <!-- قسم مشغل الفيديو المتطور -->
+      <section class="player-wrapper">
+        <div class="video-container" id="video-container">
+          <!-- عنصر الفيديو بدون سمة src صريحة لمنع فحص الرابط من DOM -->
+          <video id="video-player" playsinline preload="auto" poster=""></video>
+
+          <!-- طبقة منع النقر والتحميل المباشر فوق الفيديو -->
+          <div class="protection-overlay" id="protection-overlay"></div>
+
+          <!-- شاشة التحميل والمؤشر الحركي -->
+          <div class="player-loader hidden" id="player-loader">
+            <div class="spinner"></div>
+            <p id="loader-status">loading...</p>
+          </div>
+
+          <!-- شاشة الخطأ وانقطاع الإشارة -->
+          <div class="player-error hidden" id="player-error">
+            <div class="error-icon">📡</div>
+            <h3>تعذر الاتصال بالبث المباشر</h3>
+            <p id="error-message">قد يكون رابط القناة غير متاح حالياً، انتهت صلاحية التوكن، أو تم حظره بسياسة CORS في المتصفح.</p>
+            <div class="error-actions">
+              <button id="retry-btn" class="retry-btn">إعادة المحاولة</button>
+              <button id="proxy-retry-btn" class="proxy-retry-btn hidden">المحاولة عبر وسيط CORS</button>
+            </div>
+          </div>
+
+          <!-- عناصر التحكم المخصصة في المشغل -->
+          <div class="custom-controls" id="custom-controls">
+            <div class="controls-left">
+              <button id="play-pause-btn" class="ctrl-btn" title="تشغيل / إيقاف">
+                <svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <svg class="icon-pause hidden" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+
+              <!-- التحكم بالصوت -->
+              <div class="volume-container">
+                <button id="mute-btn" class="ctrl-btn" title="كتم الصوت">
+                  <svg class="icon-volume" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                  <svg class="icon-mute hidden" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                </button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" title="مستوى الصوت">
+              </div>
+
+              <!-- مؤشر البث المباشر ونوع المحرك -->
+              <div class="live-indicator">
+                <span class="live-dot"></span>
+                <span>بث مباشر</span>
+              </div>
+              <span id="player-engine-badge" class="engine-badge">MPEG-TS Engine</span>
+            </div>
+
+            <div class="controls-right">
+              <!-- إعادة تحميل التدفق -->
+              <button id="reload-stream-btn" class="ctrl-btn" title="تحديث تدفق البث">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M1 20v-6h6"></path>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+              </button>
+
+              <!-- زر وقائمة اختيار الجودة (SD / HD / FHD) -->
+              <div class="quality-selector-container" id="quality-selector-container">
+                <button id="quality-btn" class="ctrl-btn quality-btn" title="تغيير جودة البث (SD / HD / FHD)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                  <span id="current-quality-badge" class="quality-badge">Auto</span>
+                </button>
+                <div id="quality-menu" class="quality-menu hidden">
+                  <div class="quality-menu-header">اختر جودة البث</div>
+                  <div class="quality-menu-options" id="quality-menu-options">
+                    <button class="quality-item active" data-quality="auto">
+                      <span class="q-name">تلقائي (Auto)</span>
+                      <span class="q-sub">أفضل جودة حسب سرعة اتصالك</span>
+                    </button>
+                    <button class="quality-item" data-quality="fhd">
+                      <span class="q-name">FHD (1080p)</span>
+                      <span class="q-sub">فائق الدقة - إنترنت سريع</span>
+                    </button>
+                    <button class="quality-item" data-quality="hd">
+                      <span class="q-name">HD (720p)</span>
+                      <span class="q-sub">عالي الدقة - متوازن</span>
+                    </button>
+                    <button class="quality-item" data-quality="sd">
+                      <span class="q-name">SD (360p / 480p)</span>
+                      <span class="q-sub">جودة قياسية - إنترنت ضعيف</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- زر الشاشة الكاملة -->
+              <button id="fullscreen-btn" class="ctrl-btn" title="شاشة كاملة">
+                <svg class="icon-expand" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                <svg class="icon-compress hidden" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- تفاصيل القناة النشطة حالياً -->
+        <div class="current-channel-info">
+          <div class="channel-details">
+            <div class="channel-avatar" id="current-channel-logo">
+              <span>TV</span>
+            </div>
+            <div class="channel-meta">
+              <h2 id="current-channel-name">اختر قناة لبدء المشاهدة</h2>
+              <div class="meta-tags">
+                <span id="current-channel-category" class="tag-category">بث رقمي</span>
+                <span id="current-channel-type" class="tag-type">MPEG-TS</span>
+                <span id="current-channel-quality" class="tag-quality">FHD 1080p</span>
+                <span class="tag-secure">مشفر ومحمي</span>
+              </div>
+            </div>
+          </div>
+          <p class="channel-description" id="current-channel-desc">
+            مشغل مدمج متقدم يدعم معالجة تدفقات MPEG-TS المباشرة وروابط بوابات MAC Portal مع حظر استخراج الروابط من كود الـ DOM.
+          </p>
+        </div>
+      </section>
+
+      <!-- الشريط الجانبي: قائمة القنوات التلفزيونية -->
+      <aside class="channels-sidebar" id="channels-sidebar">
+        <div class="sidebar-header">
+          <div>
+            <h3>القنوات المتاحة (<span id="channel-count">0</span>)</h3>
+            <span class="sidebar-sub"></span>
+          </div>
+          <span class="sidebar-status">مباشر الآن</span>
+        </div>
+        
+        <!-- الحاوية الديناميكية لبطاقات القنوات -->
+        <div class="channels-grid" id="channels-list">
+          <!-- يتم ملء القنوات ديناميكياً بواسطة app.js من الذاكرة المشفرة -->
+        </div>
+
+        <!-- رسالة عند عدم العثور على نتائج بحث -->
+        <div id="no-channels" class="no-channels hidden">
+          <div class="empty-icon">🔍</div>
+          <h4>لا توجد قنوات مطابقة</h4>
+          <p>جرّب البحث باسم قناة أخرى أو اختر تصنيفاً مختلفاً.</p>
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- نافذة منبثقة لإضافة وتشغيل رابط مخصص أو رابط بوابة MAC Portal -->
+    <div id="custom-stream-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-box">
+            <span class="modal-icon">⚡</span>
+            <h3>تشغيل رابط مباشر (MPEG-TS / MAC Portal / HLS)</h3>
+          </div>
+          <button id="close-modal-btn" class="close-modal-btn" aria-label="إغلاق">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="modal-hint">
+            يمكنك إدخال أي رابط بث مباشر مباشر بصيغة <code>.ts</code> أو رابط بوابة أجهزة الماك مثل:
+            <br>
+            <code>http://185.243.7.171:80/play/live.php?mac=...&extension=ts&play_token=...</code>
+          </p>
+
+          <div class="form-group">
+            <label for="custom-url-input">رابط البث المباشر (Stream URL):</label>
+            <textarea id="custom-url-input" rows="3" placeholder="http://server:port/play/live.php?mac=00:1B:79:47:82:1F&stream=1917224&extension=ts&play_token=x8i583xBqk"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="custom-name-input">اسم القناة (اختياري):</label>
+              <input type="text" id="custom-name-input" placeholder="مثال: قناة الرياضة TS Live">
+            </div>
+            <div class="form-group">
+              <label for="custom-category-select">التصنيف:</label>
+              <select id="custom-category-select">
+                <option value="sports">رياضة (Sports)</option>
+                <option value="news">أخبار (News)</option>
+                <option value="movies">سينما وأفلام (Movies)</option>
+                <option value="documentary">وثائقيات (Documentary)</option>
+                <option value="kids">أطفال (Kids)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="custom-logo-input">رابط صورة الشعار أو الرمز التعبيري (اختياري):</label>
+            <input type="text" id="custom-logo-input" placeholder="رابط صورة مثل: https://l.top4top.io/p_39065zx0h1.png أو إيموجي ⚽">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="custom-format-select">نوع البث ومحرك التشغيل:</label>
+              <select id="custom-format-select">
+                <option value="auto">كشف تلقائي ذكي (مستحسن)</option>
+                <option value="ts">MPEG-TS (.ts أو MAC Portal)</option>
+                <option value="hls">HLS (.m3u8 Playlist)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="custom-proxy-select">وسيط حماية CORS (تجاوز قيود المتصفح):</label>
+              <select id="custom-proxy-select">
+                <option value="direct">اتصال مباشر (Direct Connection)</option>
+                <option value="corsproxy" selected>بروكسي تلقائي (corsproxy.io)</option>
+                <option value="allorigins">بروكسي بديل (allorigins)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="security-note">
+            🛡️ <strong>حماية الرابط:</strong> سيتم تشفير هذا الرابط فوراً داخل الذاكرة وتفريغه عبر مشغل <code>mpegts.js</code> بدون عرضه في الـ DOM.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="play-custom-btn" class="btn-primary">تشغيل وحفظ في القائمة</button>
+          <button id="cancel-modal-btn" class="btn-secondary">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- شريط معلومات الحماية السفلي -->
+    <footer class="app-footer">
+      <div class="footer-info">
+        <span>🛡️ نظام الحماية المزدوج نشط: تشفير الذاكرة ودعم بروتوكولات </span>
+      </div>
+      <div class="footer-copy">
+        <span>جميع حقوق البث محفوظة  © 2026 | للاستخدام المصرح فقط</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ملف البرمجة والمنطق وحماية الروابط -->
+  <script src="app.js"></script>
+</body>
+</html>
