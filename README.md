@@ -23,7 +23,7 @@ tv-stream-app/
 
 يدعم المشغل تشغيل الروابط الناتجة عن بوابات أجهزة الـ MAG / Stalker مثل:
 ```text
-http://185.243.7.171:80/play/live.php?mac=00:1B:79:47:82:1F&stream=1917224&extension=ts&play_token=x8i583xBqk
+
 ```
 
 ### كيف يعمل المشغل تقنياً؟
