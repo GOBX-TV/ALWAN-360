@@ -461,8 +461,17 @@
 
   /**
    * تطبيق وسيط فك حظر CORS في حال طلبه المستخدم أو فشل الاتصال المباشر
+   * أو في حالة Mixed Content (صفحة HTTPS + رابط بث HTTP)
    */
   function applyCorsProxy(url, proxyType) {
+    // كشف تلقائي لمشكلة Mixed Content:
+    // إذا كانت الصفحة تعمل على HTTPS والرابط يبدأ بـ HTTP، نطبق البروكسي تلقائياً
+    const pageIsHttps = window.location.protocol === 'https:';
+    const streamIsHttp = url && url.startsWith('http://');
+    if (pageIsHttps && streamIsHttp && (!proxyType || proxyType === 'direct')) {
+      proxyType = 'corsproxy';
+    }
+
     if (!proxyType || proxyType === 'direct') {
       return url;
     }
@@ -1208,3 +1217,4 @@
   }
 
 })();
+
