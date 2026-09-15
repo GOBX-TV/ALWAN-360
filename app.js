@@ -459,13 +459,33 @@
     return 'hls';
   }
 
+  // ===================================================================
+  // رابط Cloudflare Worker الخاص بك — استبدل هذا بعد رفع الـ Worker
+  // شكل الرابط: plain-river-85a0.azizmadrid5005.workers.dev
+  // ===================================================================
+  const WORKER_PROXY_URL = 'plain-river-85a0.azizmadrid5005.workers.dev';
+
   /**
-   * تطبيق وسيط فك حظر CORS في حال طلبه المستخدم أو فشل الاتصال المباشر
+   * تطبيق وسيط فك حظر CORS في حال طلبه المستخدم أو فشل الاتصال المباشر.
+   * عند تشغيل الموقع على HTTPS يتم توجيه روابط HTTP تلقائياً عبر Cloudflare Worker.
    */
   function applyCorsProxy(url, proxyType) {
+    // كشف تلقائي لمشكلة Mixed Content:
+    // الصفحة HTTPS + الرابط HTTP → يجب استخدام البروكسي تلقائياً
+    const pageIsHttps = window.location.protocol === 'https:';
+    const streamIsHttp = url && url.startsWith('http://');
+    if (pageIsHttps && streamIsHttp && (!proxyType || proxyType === 'direct')) {
+      proxyType = 'worker';
+    }
+
     if (!proxyType || proxyType === 'direct') {
       return url;
     }
+    // Cloudflare Worker: يدعم البث المباشر MPEG-TS بالكامل
+    if (proxyType === 'worker') {
+      return `${WORKER_PROXY_URL}?url=${encodeURIComponent(url)}`;
+    }
+    // احتياطي: corsproxy.io (لا يدعم streaming جيداً)
     if (proxyType === 'corsproxy') {
       return `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
     }
@@ -525,16 +545,9 @@
 
     lastAttemptedRawUrl = streamUrl;
 
-    // كشف Mixed Content: إذا كان الموقع HTTPS والرابط HTTP → تفعيل البروكسي تلقائياً
-    let autoProxy = overrideProxy || channel.proxy || 'direct';
-    if (
-      autoProxy === 'direct' &&
-      window.location.protocol === 'https:' &&
-      streamUrl.startsWith('http://')
-    ) {
-      autoProxy = 'corsproxy'; // تجاوز حظر المتصفح للمحتوى المختلط تلقائياً
-    }
-    const finalStreamUrl = applyCorsProxy(streamUrl, autoProxy);
+    // تطبيق البروكسي إن كان محدداً
+    const proxyMode = overrideProxy || channel.proxy || 'direct';
+    const finalStreamUrl = applyCorsProxy(streamUrl, proxyMode);
 
     // تفريغ أي مشغل نشط حالياً
     resetAllPlayers();
@@ -727,17 +740,8 @@
   // زر إعادة المحاولة عبر وسيط CORS
   proxyRetryBtn.addEventListener('click', () => {
     if (activeChannel) {
-      // إذا كان الموقع HTTPS والرابط HTTP، جرب allorigins كبديل لـ corsproxy
-      let nextProxy = 'corsproxy';
-      if (
-        window.location.protocol === 'https:' &&
-        lastAttemptedRawUrl &&
-        lastAttemptedRawUrl.startsWith('http://')
-      ) {
-        nextProxy = 'allorigins';
-      }
       triggerSecurityAlert('جارٍ إعادة الاتصال وتجاوز قيود CORS عبر البروكسي...');
-      playChannel(activeChannel, nextProxy);
+      playChannel(activeChannel, 'corsproxy');
     }
   });
 
@@ -1224,3 +1228,4 @@
   }
 
 })();
+
