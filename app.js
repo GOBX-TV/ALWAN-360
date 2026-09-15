@@ -460,39 +460,47 @@
   }
 
   // ===================================================================
-  // رابط Cloudflare Worker الخاص بك — استبدل هذا بعد رفع الـ Worker
-  // شكل الرابط: plain-river-85a0.azizmadrid5005.workers.dev
+  // رابط Cloudflare Worker — ضع هنا رابط Worker الحقيقي الخاص بك
+  // مثال: https://plain-river-85a0.azizmadrid5005.workers.dev
   // ===================================================================
-  const WORKER_PROXY_URL = 'plain-river-85a0.azizmadrid5005.workers.dev';
+  const WORKER_BASE_URL = 'https://plain-river-85a0.azizmadrid5005.workers.dev';
 
   /**
-   * تطبيق وسيط فك حظر CORS في حال طلبه المستخدم أو فشل الاتصال المباشر.
-   * عند تشغيل الموقع على HTTPS يتم توجيه روابط HTTP تلقائياً عبر Cloudflare Worker.
+   * استخراج stream ID من رابط MAC Portal
+   * مثال: http://host/play/live.php?stream=1917225 → '1917225'
    */
-  function applyCorsProxy(url, proxyType) {
-    // كشف تلقائي لمشكلة Mixed Content:
-    // الصفحة HTTPS + الرابط HTTP → يجب استخدام البروكسي تلقائياً
+  function extractStreamId(url) {
+    if (!url) return null;
+    const match = url.match(/[?&]stream=(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * بناء رابط البث النهائي:
+   * - إذا الصفحة HTTPS → Worker /stream?stream=ID (يجدد التوكن تلقائياً)
+   * - إذا محلياً file:// → يشغل الرابط مباشرة
+   */
+  function buildFinalStreamUrl(rawUrl) {
     const pageIsHttps = window.location.protocol === 'https:';
-    const streamIsHttp = url && url.startsWith('http://');
-    if (pageIsHttps && streamIsHttp && (!proxyType || proxyType === 'direct')) {
-      proxyType = 'worker';
+    const streamIsHttp = rawUrl && rawUrl.startsWith('http://');
+
+    if (pageIsHttps && streamIsHttp) {
+      const streamId = extractStreamId(rawUrl);
+      if (streamId) {
+        // Worker الذكي يحصل على token جديد تلقائياً
+        return `${WORKER_BASE_URL}/stream?stream=${streamId}`;
+      }
+      // احتياطي: بروكسي مباشر
+      return `${WORKER_BASE_URL}/proxy?url=${encodeURIComponent(rawUrl)}`;
     }
 
-    if (!proxyType || proxyType === 'direct') {
-      return url;
-    }
-    // Cloudflare Worker: يدعم البث المباشر MPEG-TS بالكامل
-    if (proxyType === 'worker') {
-      return `${WORKER_PROXY_URL}?url=${encodeURIComponent(url)}`;
-    }
-    // احتياطي: corsproxy.io (لا يدعم streaming جيداً)
-    if (proxyType === 'corsproxy') {
-      return `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
-    }
-    if (proxyType === 'allorigins') {
-      return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    }
-    return url;
+    // تشغيل محلي — مباشر
+    return rawUrl;
+  }
+
+  // دالة قديمة للتوافق (لا تزال تستخدم في أماكن أخرى)
+  function applyCorsProxy(url, proxyType) {
+    return buildFinalStreamUrl(url);
   }
 
   // ==========================================================================
@@ -545,9 +553,8 @@
 
     lastAttemptedRawUrl = streamUrl;
 
-    // تطبيق البروكسي إن كان محدداً
-    const proxyMode = overrideProxy || channel.proxy || 'direct';
-    const finalStreamUrl = applyCorsProxy(streamUrl, proxyMode);
+    // بناء الرابط النهائي (يطبق Worker الذكي تلقائياً عند الحاجة)
+    const finalStreamUrl = buildFinalStreamUrl(streamUrl);
 
     // تفريغ أي مشغل نشط حالياً
     resetAllPlayers();
@@ -563,6 +570,7 @@
 
     highlightActiveChannelCard();
   }
+
 
   /**
    * محرك تشغيل تدفقات MPEG-TS المباشرة بواسطة mpegts.js
